@@ -1,0 +1,234 @@
+<!-- MindHaven OPTION B – Pure Frontend (HTML + CSS + JS) with NO BACKEND, NO PYTHON, NO API -->
+<!-- Fully Offline, Animated, Modern UI -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindHaven – Frontend Option B</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            background: #0d0d0d;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #222;
+            animation: fadeIn 1s ease;
+        }
+
+        .chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .msg {
+            max-width: 75%;
+            padding: 15px 18px;
+            border-radius: 12px;
+            animation: slideUp .4s ease;
+        }
+
+        .user {
+            align-self: flex-end;
+            background: #1f1f1f;
+        }
+
+        .bot {
+            align-self: flex-start;
+            background: #0c1624;
+            border-left: 4px solid #fff;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .bottom {
+            display: flex;
+            padding: 15px;
+            gap: 10px;
+            background: #0d0d0d;
+            border-top: 1px solid #222;
+        }
+
+        input {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 14px 22px;
+            border: none;
+            background: #fff;
+            color: #000;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: .25s;
+        }
+
+        button:hover {
+            transform: scale(1.08);
+        }
+
+        /* Mic Button */
+        #micBtn {
+            width: 48px;
+            height: 48px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        #micBtn.recording {
+            background: #ff4d6d;
+        }
+    </style>
+</head>
+
+<body>
+    <header>MindHaven – Frontend Edition (Option B)</header>
+    <div class="chat" id="chat"></div>
+
+    <div class="bottom">
+        <input id="userInput" placeholder="Type how you feel..." />
+        <button onclick="sendMsg()">Send</button>
+        <div id="micBtn">🎤</div>
+    </div>
+
+    <script>
+        let chat = document.getElementById("chat");
+        let stats = { joy: 0, sadness: 0, anger: 0, fear: 0, disgust: 0, neutral: 0 };
+        let recognition = null;
+        let recording = false;
+
+        function addMsg(text, who) {
+            let div = document.createElement("div");
+            div.className = "msg " + who;
+            div.innerText = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function detectEmotion(text) {
+            text = text.toLowerCase();
+            const emo = {
+                sadness: ["sad", "alone", "tired", "low", "depress"],
+                joy: ["happy", "good", "great", "awesome", "excited"],
+                anger: ["angry", "hate", "annoy", "irritate"],
+                fear: ["scared", "anxious", "panic", "worried"],
+                disgust: ["gross", "disgust", "nasty"]
+            };
+            let best = "neutral";
+            for (let e in emo) {
+                for (let w of emo[e]) {
+                    if (text.includes(w)) best = e;
+                }
+            }
+            return best;
+        }
+
+        function crisisCheck(t) {
+            return ["suicide", "kill myself", "end my life", "die"].some(k => t.toLowerCase().includes(k));
+        }
+
+        function botReply(user) {
+            if (crisisCheck(user)) return "⚠️ You might be in danger. Please seek emergency help immediately.";
+            let emo = detectEmotion(user); stats[emo]++;
+            const replies = {
+                sadness: ["I'm here with you 💙", "It's okay to feel low sometimes."],
+                joy: ["That's wonderful to hear!", "Keep shining!"],
+                anger: ["I understand your frustration.", "It's okay to feel angry."],
+                fear: ["You're safe. Breathe slowly.", "I understand that fear."],
+                disgust: ["That sounds unpleasant.", "Sorry you experienced that."],
+                neutral: ["Tell me more.", "I'm listening."]
+            };
+            return replies[emo][Math.floor(Math.random() * replies[emo].length)];
+        }
+
+        function sendMsg() {
+            let input = document.getElementById("userInput");
+            let text = input.value.trim();
+            if (!text) return;
+            addMsg(text, "user");
+            input.value = "";
+            let reply = botReply(text);
+            addMsg(reply, "bot");
+            speak(reply);
+        }
+
+        function speak(t) {
+            let u = new SpeechSynthesisUtterance(t);
+            speechSynthesis.speak(u);
+        }
+
+        // ---- Voice Input ---
+        let mic = document.getElementById("micBtn");
+        mic.addEventListener("click", () => {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Browser does not support voice input.");
+                return;
+            }
+            const R = window.webkitSpeechRecognition;
+            recognition = new R();
+            recognition.lang = "en-US";
+            recognition.onstart = () => mic.classList.add("recording");
+            recognition.onend = () => mic.classList.remove("recording");
+            recognition.onresult = e => sendMsgFromVoice(e.results[0][0].transcript);
+            recognition.start();
+        });
+
+        function sendMsgFromVoice(t) {
+            addMsg(t, "user");
+            let r = botReply(t);
+            addMsg(r, "bot");
+            speak(r);
+        }
+    </script>
+</body>
+
+</html>
